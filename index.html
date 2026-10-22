@@ -1,0 +1,740 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Bucks2Bar — Income & Expense by Month</title>
+
+        <!-- Bootstrap 5 CSS (CDN) -->
+        <link
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+            rel="stylesheet"
+        />
+
+        <!-- Optional lightweight styling -->
+        <style>
+            body {
+                background: #0f1724;
+                color: #e6eef8;
+                padding: 1.5rem;
+                min-height: 100vh;
+            }
+            .card {
+                background: #111827;
+                border: 1px solid rgba(255, 255, 255, 0.04);
+            }
+            input[type="number"] {
+                background: #0b1220;
+                color: #e6eef8;
+                border: 1px solid rgba(255, 255, 255, 0.06);
+            }
+            .month-label {
+                width: 4.5rem;
+            }
+            .totals {
+                font-weight: 600;
+            }
+            .nav-tabs .nav-link {
+                color: #cbd5e1;
+            }
+            .nav-tabs .nav-link.active {
+                color: #0b1220;
+                background: #60a5fa;
+            }
+            .small-muted {
+                color: #9aa7bb;
+            }
+            footer small {
+                color: #8b98a8;
+            }
+        </style>
+    </head>
+    <body>
+        <main class="container">
+            <header
+                class="d-flex align-items-start justify-content-between mb-3"
+            >
+                <div>
+                    <h1 class="h3 mb-1">Bucks2Bar</h1>
+                    <p class="small-muted mb-0">
+                        Static UI: enter monthly income & expenses and view a
+                        bar chart.
+                    </p>
+                </div>
+                <div class="text-end">
+                    <button
+                        id="exportBtn"
+                        class="btn btn-outline-secondary btn-sm me-2"
+                        title="Export data as JSON"
+                    >
+                        Export
+                    </button>
+                    <button
+                        id="importBtn"
+                        class="btn btn-outline-secondary btn-sm"
+                        title="Import data (paste JSON)"
+                    >
+                        Import
+                    </button>
+                </div>
+            </header>
+
+            <section class="card p-3">
+                <!-- Tabs -->
+                <ul class="nav nav-tabs mb-3" id="mainTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button
+                            class="nav-link active"
+                            id="data-tab"
+                            data-bs-toggle="tab"
+                            data-bs-target="#data"
+                            type="button"
+                            role="tab"
+                            aria-controls="data"
+                            aria-selected="true"
+                        >
+                            Data
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button
+                            class="nav-link"
+                            id="chart-tab"
+                            data-bs-toggle="tab"
+                            data-bs-target="#chart"
+                            type="button"
+                            role="tab"
+                            aria-controls="chart"
+                            aria-selected="false"
+                        >
+                            Chart
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <!-- Data Tab -->
+                    <div
+                        class="tab-pane fade show active"
+                        id="data"
+                        role="tabpanel"
+                        aria-labelledby="data-tab"
+                    >
+                        <div class="table-responsive">
+                            <table
+                                class="table table-borderless align-middle text-light"
+                            >
+                                <thead>
+                                    <tr class="small-muted">
+                                        <th>Month</th>
+                                        <th class="text-end">Income</th>
+                                        <th class="text-end">Expense</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="monthsBody" class="fs-6">
+                                    <!-- Rows populated by JS -->
+                                </tbody>
+                                <tfoot>
+                                    <tr class="border-top pt-2">
+                                        <td class="totals">Totals</td>
+                                        <td
+                                            class="text-end totals"
+                                            id="totalIncome"
+                                        >
+                                            $0.00
+                                        </td>
+                                        <td
+                                            class="text-end totals"
+                                            id="totalExpense"
+                                        >
+                                            $0.00
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-3">
+                            <button
+                                id="resetBtn"
+                                class="btn btn-outline-danger btn-sm"
+                            >
+                                Reset
+                            </button>
+                            <button
+                                id="fillDemoBtn"
+                                class="btn btn-outline-success btn-sm"
+                            >
+                                Fill demo data
+                            </button>
+                            <div class="ms-auto small-muted align-self-center">
+                                Values persist in your browser (localStorage)
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chart Tab -->
+                    <div
+                        class="tab-pane fade"
+                        id="chart"
+                        role="tabpanel"
+                        aria-labelledby="chart-tab"
+                    >
+                        <div class="mb-3">
+                            <canvas
+                                id="bucksChart"
+                                width="800"
+                                height="400"
+                                aria-label="Income and Expense bar chart"
+                                role="img"
+                            ></canvas>
+                        </div>
+
+                        <div class="d-flex gap-2 align-items-center">
+                            <div class="form-check form-switch">
+                                <input
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    id="stackToggle"
+                                />
+                                <label
+                                    class="form-check-label small-muted"
+                                    for="stackToggle"
+                                    >Stacked bars</label
+                                >
+                            </div>
+
+                            <div class="form-check form-switch">
+                                <input
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    id="showExpenseToggle"
+                                    checked
+                                />
+                                <label
+                                    class="form-check-label small-muted"
+                                    for="showExpenseToggle"
+                                    >Show expenses</label
+                                >
+                            </div>
+
+                            <button
+                                id="downloadChartBtn"
+                                class="btn btn-sm"
+                                title="Download chart as PNG"
+                                style="
+                                    background: #ff69b4;
+                                    color: #0b1220;
+                                    border: 1px solid rgba(255, 255, 255, 0.06);
+                                "
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                    role="img"
+                                    class="me-1"
+                                >
+                                    <path
+                                        d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"
+                                    ></path>
+                                    <polyline
+                                        points="7 10 12 15 17 10"
+                                    ></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                                <span class="visually-hidden"
+                                    >Download chart</span
+                                >
+                            </button>
+
+                            <div class="ms-auto small-muted">
+                                Interactive chart powered by Chart.js
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="mt-3 text-center small">
+                <div>
+                    Built with Bootstrap & Chart.js • Data saved locally in your
+                    browser
+                </div>
+                <small>© Bucks2Bar</small>
+            </footer>
+        </main>
+
+        <!-- Bootstrap Bundle (includes Popper) -->
+        <script
+            src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+            defer
+        ></script>
+
+        <!-- Chart.js (CDN) -->
+        <script
+            src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"
+            defer
+        ></script>
+
+        <!-- Application script -->
+        <script defer>
+            (function () {
+                // Constants & state
+                const STORAGE_KEY = "bucks2bar-data-v1";
+                const months = [
+                    "Jan",
+                    "Feb",
+                    "Mar",
+                    "Apr",
+                    "May",
+                    "Jun",
+                    "Jul",
+                    "Aug",
+                    "Sep",
+                    "Oct",
+                    "Nov",
+                    "Dec",
+                ];
+                let state = {
+                    income: Array(12).fill(0),
+                    expense: Array(12).fill(0),
+                };
+
+                // DOM
+                const monthsBody = document.getElementById("monthsBody");
+                const totalIncomeEl = document.getElementById("totalIncome");
+                const totalExpenseEl = document.getElementById("totalExpense");
+                const resetBtn = document.getElementById("resetBtn");
+                const fillDemoBtn = document.getElementById("fillDemoBtn");
+                const exportBtn = document.getElementById("exportBtn");
+                const importBtn = document.getElementById("importBtn");
+
+                const stackToggle = document.getElementById("stackToggle");
+                const showExpenseToggle =
+                    document.getElementById("showExpenseToggle");
+
+                // Chart
+                let bucksChart = null;
+                const chartCanvas = document.getElementById("bucksChart");
+
+                // --- Persistence ---
+                function saveState() {
+                    try {
+                        localStorage.setItem(
+                            STORAGE_KEY,
+                            JSON.stringify(state),
+                        );
+                    } catch (e) {
+                        console.error("Failed to save data", e);
+                    }
+                }
+
+                function loadState() {
+                    try {
+                        const raw = localStorage.getItem(STORAGE_KEY);
+                        if (raw) {
+                            const parsed = JSON.parse(raw);
+                            if (
+                                parsed &&
+                                Array.isArray(parsed.income) &&
+                                Array.isArray(parsed.expense)
+                            ) {
+                                state.income = parsed.income
+                                    .slice(0, 12)
+                                    .map((v) => Number(v) || 0);
+                                state.expense = parsed.expense
+                                    .slice(0, 12)
+                                    .map((v) => Number(v) || 0);
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Failed to load saved data", e);
+                    }
+                }
+
+                // --- UI rendering ---
+                function renderTable() {
+                    monthsBody.innerHTML = "";
+                    months.forEach((m, i) => {
+                        const tr = document.createElement("tr");
+
+                        // Month label
+                        const tdMonth = document.createElement("td");
+                        tdMonth.className = "align-middle";
+                        tdMonth.innerHTML =
+                            '<span class="month-label d-inline-block me-2 small-muted">' +
+                            m +
+                            "</span>";
+                        tr.appendChild(tdMonth);
+
+                        // Income input
+                        const tdIncome = document.createElement("td");
+                        tdIncome.className = "text-end";
+                        const incomeInput = document.createElement("input");
+                        incomeInput.type = "number";
+                        incomeInput.min = "0";
+                        incomeInput.step = "0.01";
+                        incomeInput.value = Number(state.income[i]).toFixed(2);
+                        incomeInput.className =
+                            "form-control form-control-sm d-inline-block";
+                        incomeInput.style.width = "9rem";
+                        incomeInput.setAttribute("aria-label", m + " income");
+                        incomeInput.addEventListener("input", () => {
+                            state.income[i] = Number(incomeInput.value) || 0;
+                            saveState();
+                            updateTotals();
+                        });
+                        tdIncome.appendChild(incomeInput);
+                        tr.appendChild(tdIncome);
+
+                        // Expense input
+                        const tdExpense = document.createElement("td");
+                        tdExpense.className = "text-end";
+                        const expenseInput = document.createElement("input");
+                        expenseInput.type = "number";
+                        expenseInput.min = "0";
+                        expenseInput.step = "0.01";
+                        expenseInput.value = Number(state.expense[i]).toFixed(
+                            2,
+                        );
+                        expenseInput.className =
+                            "form-control form-control-sm d-inline-block";
+                        expenseInput.style.width = "9rem";
+                        expenseInput.setAttribute("aria-label", m + " expense");
+                        expenseInput.addEventListener("input", () => {
+                            state.expense[i] = Number(expenseInput.value) || 0;
+                            saveState();
+                            updateTotals();
+                        });
+                        tdExpense.appendChild(expenseInput);
+                        tr.appendChild(tdExpense);
+
+                        monthsBody.appendChild(tr);
+                    });
+
+                    updateTotals();
+                }
+
+                function updateTotals() {
+                    const totalIncome = state.income.reduce(
+                        (a, b) => a + Number(b),
+                        0,
+                    );
+                    const totalExpense = state.expense.reduce(
+                        (a, b) => a + Number(b),
+                        0,
+                    );
+                    totalIncomeEl.textContent = formatMoney(totalIncome);
+                    totalExpenseEl.textContent = formatMoney(totalExpense);
+
+                    // Update chart if visible
+                    if (bucksChart) {
+                        updateChartData();
+                    }
+                }
+
+                // --- Chart setup ---
+                function createChart() {
+                    if (!chartCanvas) return;
+                    const ctx = chartCanvas.getContext("2d");
+
+                    const config = {
+                        type: "bar",
+                        data: {
+                            labels: months,
+                            datasets: [
+                                {
+                                    label: "Income",
+                                    backgroundColor: "rgba(56, 189, 248, 0.85)", // sky-400
+                                    borderColor: "rgba(56, 189, 248, 1)",
+                                    borderWidth: 1,
+                                    data: state.income.slice(),
+                                },
+                                {
+                                    label: "Expense",
+                                    backgroundColor:
+                                        "rgba(248, 113, 113, 0.85)", // red-400
+                                    borderColor: "rgba(248, 113, 113, 1)",
+                                    borderWidth: 1,
+                                    data: state.expense.slice(),
+                                },
+                            ],
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    labels: {
+                                        color: "#e6eef8",
+                                    },
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: (ctx) => {
+                                            const label =
+                                                ctx.dataset.label || "";
+                                            return (
+                                                label +
+                                                ": " +
+                                                formatMoney(
+                                                    ctx.parsed.y ?? ctx.parsed,
+                                                )
+                                            );
+                                        },
+                                    },
+                                },
+                            },
+                            scales: {
+                                x: {
+                                    stacked: false,
+                                    grid: { color: "rgba(255,255,255,0.03)" },
+                                    ticks: { color: "#e6eef8" },
+                                },
+                                y: {
+                                    stacked: false,
+                                    beginAtZero: true,
+                                    grid: { color: "rgba(255,255,255,0.03)" },
+                                    ticks: {
+                                        color: "#e6eef8",
+                                        callback: function (value) {
+                                            return "$" + value;
+                                        },
+                                    },
+                                },
+                            },
+                            elements: {
+                                bar: { borderRadius: 4 },
+                            },
+                        },
+                    };
+
+                    if (bucksChart) {
+                        bucksChart.destroy();
+                        bucksChart = null;
+                    }
+
+                    bucksChart = new Chart(ctx, config);
+                    // make canvas container flexible height
+                    chartCanvas.parentElement.style.height = "420px";
+                }
+
+                function updateChartData() {
+                    if (!bucksChart) return;
+                    bucksChart.data.datasets[0].data = state.income.slice();
+                    bucksChart.data.datasets[1].data = showExpenseToggle.checked
+                        ? state.expense.slice()
+                        : Array(12).fill(0);
+                    bucksChart.options.scales.x.stacked = stackToggle.checked;
+                    bucksChart.options.scales.y.stacked = stackToggle.checked;
+                    bucksChart.update();
+                }
+
+                // --- Utilities ---
+                function formatMoney(v) {
+                    return (
+                        "$" +
+                        Number(v).toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                        })
+                    );
+                }
+
+                // --- Controls ---
+                resetBtn.addEventListener("click", () => {
+                    if (!confirm("Reset all monthly values to 0?")) return;
+                    state.income = Array(12).fill(0);
+                    state.expense = Array(12).fill(0);
+                    saveState();
+                    renderTable();
+                    if (bucksChart) updateChartData();
+                });
+
+                fillDemoBtn.addEventListener("click", () => {
+                    // sample seasonal/demo data
+                    const demoIncome = [
+                        1200, 1400, 1500, 1800, 2100, 2400, 2600, 2500, 2200,
+                        2000, 1700, 1500,
+                    ];
+                    const demoExpense = [
+                        800, 900, 950, 1000, 1200, 1400, 1500, 1480, 1300, 1250,
+                        1100, 1000,
+                    ];
+                    state.income = demoIncome.slice();
+                    state.expense = demoExpense.slice();
+                    saveState();
+                    renderTable();
+                });
+
+                exportBtn.addEventListener("click", () => {
+                    const payload = JSON.stringify(state, null, 2);
+                    // Create a temporary textarea to copy to clipboard
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(payload).then(
+                            () => {
+                                alert(
+                                    "Data copied to clipboard as JSON. You can paste it into a file to save externally.",
+                                );
+                            },
+                            () => {
+                                prompt("Copy your data (Ctrl/Cmd+C):", payload);
+                            },
+                        );
+                    } else {
+                        prompt("Copy your data (Ctrl/Cmd+C):", payload);
+                    }
+                });
+
+                // Download chart button handler - exports the chart canvas as a PNG file
+                (function bindDownloadChart() {
+                    const downloadChartBtn =
+                        document.getElementById("downloadChartBtn");
+                    if (!downloadChartBtn) return;
+
+                    downloadChartBtn.addEventListener("click", () => {
+                        if (!chartCanvas) {
+                            alert("Chart is not available.");
+                            return;
+                        }
+                        // Ensure chart is up-to-date
+                        if (bucksChart) {
+                            try {
+                                bucksChart.update();
+                            } catch (e) {
+                                // ignore update errors and continue to export current canvas
+                            }
+                        }
+
+                        // Use toBlob for better memory behavior
+                        if (chartCanvas.toBlob) {
+                            chartCanvas.toBlob(
+                                (blob) => {
+                                    if (!blob) {
+                                        alert("Failed to generate image.");
+                                        return;
+                                    }
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement("a");
+                                    a.href = url;
+                                    a.download = "bucks2bar-chart.png";
+                                    // For some browsers, must be in document to click
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                    // Release memory
+                                    setTimeout(
+                                        () => URL.revokeObjectURL(url),
+                                        1000,
+                                    );
+                                },
+                                "image/png",
+                                1.0,
+                            );
+                        } else {
+                            // Fallback: data URL
+                            try {
+                                const dataUrl =
+                                    chartCanvas.toDataURL("image/png");
+                                const a = document.createElement("a");
+                                a.href = dataUrl;
+                                a.download = "bucks2bar-chart.png";
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                            } catch (e) {
+                                alert(
+                                    "Chart download is not supported in this browser.",
+                                );
+                            }
+                        }
+                    });
+                })();
+
+                importBtn.addEventListener("click", async () => {
+                    const raw = prompt(
+                        "Paste Bucks2Bar JSON to import (overwrites current values):",
+                    );
+                    if (!raw) return;
+                    try {
+                        const parsed = JSON.parse(raw);
+                        if (
+                            parsed &&
+                            Array.isArray(parsed.income) &&
+                            Array.isArray(parsed.expense)
+                        ) {
+                            state.income = parsed.income
+                                .slice(0, 12)
+                                .map((v) => Number(v) || 0);
+                            state.expense = parsed.expense
+                                .slice(0, 12)
+                                .map((v) => Number(v) || 0);
+                            saveState();
+                            renderTable();
+                            if (bucksChart) updateChartData();
+                            alert("Import successful.");
+                        } else {
+                            alert(
+                                'Invalid data format. Expected object with "income" and "expense" arrays.',
+                            );
+                        }
+                    } catch (e) {
+                        alert("Failed to parse JSON: " + e.message);
+                    }
+                });
+
+                stackToggle.addEventListener("change", () => {
+                    if (bucksChart) updateChartData();
+                });
+
+                showExpenseToggle.addEventListener("change", () => {
+                    if (bucksChart) updateChartData();
+                });
+
+                // Update chart when Chart tab becomes active
+                document
+                    .getElementById("chart-tab")
+                    .addEventListener("shown.bs.tab", function () {
+                        if (!bucksChart) createChart();
+                        updateChartData();
+                    });
+
+                // Initialize
+                (function init() {
+                    loadState();
+                    renderTable();
+                    // create chart immediately if user opens chart tab by default (not in this UI)
+                    // but we create lazily on tab show to avoid layout issues.
+                    // Pre-bind Chart when Chart.js is loaded
+                    function ensureChartWhenChartJsReady() {
+                        if (window.Chart) {
+                            // Chart.js loaded; nothing to do until tab activated
+                        } else {
+                            // try again shortly
+                            setTimeout(ensureChartWhenChartJsReady, 200);
+                        }
+                    }
+                    ensureChartWhenChartJsReady();
+                })();
+
+                // Expose some things to console for debugging convenience
+                window.Bucks2Bar = {
+                    state,
+                    saveState,
+                    loadState,
+                    renderTable,
+                    createChart,
+                    updateChartData,
+                };
+            })();
+        </script>
+    </body>
+</html>
